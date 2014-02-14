@@ -110,6 +110,7 @@ ovf2_data data = {err:NULL};
         }
     }
 
+
     //if (!streq(line, "# begin: data binary 4")){
     //	panic(line);
     //}
@@ -122,6 +123,7 @@ ovf2_data data = {err:NULL};
 	}
 
     size_t nfloat = ovf2_datalen(data);
+	assert(nfloat > 0);
     data.data = (float*)malloc(nfloat * sizeof(float));
     efread(data.data, sizeof(float), nfloat, in);
 
@@ -202,4 +204,17 @@ void ovf2_writeffile(const char *filename, ovf2_data data) {
     fclose(out);
 }
 
-
+void ovf2_free(ovf2_data *d){
+	if(d->err != NULL){
+		free(d->err);
+		d->err = NULL;
+	}
+	if(d->data != NULL){
+		free(d->data);
+		d->data = NULL;
+	}
+	d->valuedim = 0;
+	d->xnodes = 0;
+	d->ynodes = 0;
+	d->znodes = 0;
+}
