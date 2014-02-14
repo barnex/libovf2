@@ -115,15 +115,15 @@ ovf2_data data = {err:NULL};
     //	panic(line);
     //}
 
-	// control number
-	float control = 0;
+    // control number
+    float control = 0;
     efread(&control, sizeof(float), 1, in);
-	if (control != OVF2_CONTROL_NUMBER){
-		panic("invalid ovf control number");
-	}
+    if (control != OVF2_CONTROL_NUMBER) {
+        panic("invalid ovf control number");
+    }
 
     size_t nfloat = ovf2_datalen(data);
-	assert(nfloat > 0);
+    assert(nfloat > 0);
     data.data = (float*)malloc(nfloat * sizeof(float));
     efread(data.data, sizeof(float), nfloat, in);
 
@@ -180,9 +180,9 @@ void ovf2_write(FILE* out, ovf2_data data) {
     fprintf(out, "# znodes: %d\n", data.znodes); // TODO: e
 
     for(int z=0; z<data.znodes; z++) {
-    	for(int y=0; y<data.ynodes; y++) {
-    		for(int x=0; x<data.xnodes; x++) {
-    			for(int c=0; c<data.valuedim; c++) {
+        for(int y=0; y<data.ynodes; y++) {
+            for(int x=0; x<data.xnodes; x++) {
+                for(int c=0; c<data.valuedim; c++) {
                     float v = ovf2_get(&data, c, x, y, z);
                     fprintf(out, "%f ", v);
                 }
@@ -204,17 +204,17 @@ void ovf2_writeffile(const char *filename, ovf2_data data) {
     fclose(out);
 }
 
-void ovf2_free(ovf2_data *d){
-	if(d->err != NULL){
-		free(d->err);
-		d->err = NULL;
-	}
-	if(d->data != NULL){
-		free(d->data);
-		d->data = NULL;
-	}
-	d->valuedim = 0;
-	d->xnodes = 0;
-	d->ynodes = 0;
-	d->znodes = 0;
+void ovf2_free(ovf2_data *d) {
+    if(d->err != NULL) {
+        free(d->err);
+        d->err = NULL;
+    }
+    if(d->data != NULL) {
+        free(d->data);
+        d->data = NULL;
+    }
+    d->valuedim = 0;
+    d->xnodes = 0;
+    d->ynodes = 0;
+    d->znodes = 0;
 }

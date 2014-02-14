@@ -4,22 +4,22 @@
 #include <stdio.h>
 
 /* First number in data section.
- * OVF specification, OOMMF user's guide 1.2a4, page 223. 
+ * OVF specification, OOMMF user's guide 1.2a4, page 223.
  */
-#define OVF2_CONTROL_NUMBER 1234567.0 
+#define OVF2_CONTROL_NUMBER 1234567.0
 
 /* Holds stripped-down content of an OVF file
  * (relevant header + data).
  */
 typedef struct {
     char *err;                  // error message, if any
-	int valuedim;               // number of data components
+    int valuedim;               // number of data components
     int xnodes, ynodes, znodes; // grid size
-	float *data;                // data
+    float *data;                // data
 } ovf2_data;
 
 
-/* Reads the named OVF file. 
+/* Reads the named OVF file.
  * ovf2_data.err contains an error message if something went wrong.
  */
 ovf2_data ovf2_readfile(const char *filename);
