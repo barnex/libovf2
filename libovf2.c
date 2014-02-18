@@ -39,22 +39,22 @@ char* ovf2_buf(){
 
 /* internal: string equals */
 bool ovf2_strEq(const char *a, const char *b) {
-    assert(a!=NULL && b!=NULL);
-    return (strcmp(a, b) == 0);
+	assert(a!=NULL && b!=NULL);
+	return (strcmp(a, b) == 0);
 }
 
 /* internal: s has prefix prefix? */
 bool ovf2_hasPrefix(const char *s, const char *prefix) {
-    assert(s!=NULL && prefix!=NULL);
-    return (strstr(s, prefix) == s);
+	assert(s!=NULL && prefix!=NULL);
+	return (strstr(s, prefix) == s);
 }
 
 /* internal: overwrite s with lowercase version */
 void ovf2_toLower(char *s) {
 	int i;
-    for(i=0; s[i] != 0; i++) {
-        s[i] = tolower(s[i]);
-    }
+	for(i=0; s[i] != 0; i++) {
+		s[i] = tolower(s[i]);
+	}
 }
 
 /* internal: header whitespace characters */
@@ -77,7 +77,7 @@ void ovf2_sn(int n){
     xnodes: 7 
 */
 void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
-    char *result = fgets(line, BUFLEN, in);
+	char *result = fgets(line, BUFLEN, in);
 	if (result != line){
 		d->err = ovf2_buf();
 		ovf2_sn(sprintf(d->err, "ovf2_read: input error: errno %d", errno));
@@ -114,7 +114,7 @@ void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
 	}
 
 	/* finally, lowercase to avoid confusion between End Data, End data, end Data,... */
-    ovf2_toLower(line);
+	ovf2_toLower(line);
 }
 
 /* internal: retrieves value from "key: value" pair. 
@@ -135,7 +135,7 @@ const char* ovf2_hdrVal(const char *line){
 /* internal: read nfloat floats from in to d->data.
    store possible error message in d->err. */
 void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
-    int ret = fread(d->data, sizeof(float), nfloat, in);
+	int ret = fread(d->data, sizeof(float), nfloat, in);
 	if(ret != nfloat){
 		d->err = ovf2_buf();
 		ovf2_sn(sprintf(d->err, "ovf2_read: input error: errno %d", errno));
@@ -150,7 +150,7 @@ ovf2_data ovf2_makeData(){
 
 ovf2_data ovf2_read(FILE* in) {
 	ovf2_data d = ovf2_makeData();
-    char line[BUFLEN+1] = {}; 
+	char line[BUFLEN+1] = {}; 
 
 	ovf2_readLine(&d, line, in);
 	if( !ovf2_strEq(line, "oommf ovf 2.0") ){
