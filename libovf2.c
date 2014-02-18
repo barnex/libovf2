@@ -43,14 +43,14 @@ void panic(const char *msg) {
     abort();
 }
 
-bool streq(const char *a, const char *b) {
+bool strEq(const char *a, const char *b) {
     if(a==NULL || b==NULL) {
         panic("streq: NULL input");
     }
     return (strcmp(a, b) == 0);
 }
 
-bool hasprefix(const char *s, const char *prefix) {
+bool hasPrefix(const char *s, const char *prefix) {
     if(s==NULL || prefix==NULL) {
         panic("hasprefix: NULL input");
     }
@@ -79,19 +79,6 @@ void efread(void* ptr, size_t size, size_t count, FILE *stream) {
 }
 
 
-char* SprintD(const char *format, int d){
-	char *buf = (char*)malloc(BUFLEN+1);
-	snprintf(buf, BUFLEN, format, d);
-	return buf;
-}
-
-
-char* SprintS(const char *format, const char * s){
-	char *buf = (char*)malloc(BUFLEN+1);
-	snprintf(buf, BUFLEN, format, s);
-	return buf;
-}
-
 bool ovfIsSpace(char c){
 	return c == ' ' || c == '\t';
 }
@@ -106,13 +93,15 @@ bool ovfIsSpace(char c){
 void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
     char *result = fgets(line, BUFLEN, in);
 	if (result != line){
-		d->err = SprintD("ovf2_readline: errno %d", errno);
+		d->err = newLineBuf();
+		snprintf(d->err, BUFLEN, "ovf2_read: input error: errno %d", errno);
 		return;
 	}
 
 	// remove leading '#'
 	if (line[0] != '#'){
-		d->err = SprintS("ovf2: invalid header line: \"%s\"", line);
+		d->err = newLineBuf();
+		snprintf(d->err, BUFLEN, "ovf2_read: invalid header line: \"%s\"", line);
 	}
 	line[0] = ' '; // replace leading '#' by space that will be trimmed.
 
@@ -164,37 +153,43 @@ ovf2_data ovf2_read(FILE* in) {
     char line[BUFLEN+1] = {}; 
 
 	for(ovf2_readLine(&d, line, in); d.err == NULL; ovf2_readLine(&d, line, in)){
-		printf("\"%s\"\n", line);
-		printf("value:\"%s\"\n", hdrVal(line));
+
+		// stop at begin data section
+		if(hasPrefix(line, "begin:") && hasPrefix(hdrVal(line), "data")){
+			break;
+		}
+
+        if(hasPrefix(line, "valuedim:")) {
+            d.valuedim = atoi(hdrVal(line));
+            continue;
+        }
+        if(hasPrefix(line, "xnodes:")) {
+            d.xnodes = atoi(hdrVal(line));
+            continue;
+        }
+        if(hasPrefix(line, "ynodes:")) {
+            d.ynodes = atoi(hdrVal(line));
+            continue;
+        }
+        if(hasPrefix(line, "znodes:")) {
+            d.znodes = atoi(hdrVal(line));
+            continue;
+        }
+    }
+
+	if(d.valuedim <= 0){
+		d.err = newLineBuf();
+		snprintf(d.err, BUFLEN, "ovf2_read: invalid valuedim: %d", d.valuedim);
+	}
+
+	if(d.xnodes <= 0 || d.ynodes <= 0 || d.znodes <= 0){
+		d.err = newLineBuf();
+		snprintf(d.err, BUFLEN, "ovf2_read: invalid grid size: %d x %d x %d", d.xnodes, d.ynodes, d.znodes);
 	}
 
 	if (d.err != NULL){
 		return d;
 	}
-
-	
-    // read header
-    //for (ovf2_gets(line, in); !hasprefix(line, "# begin: data"); ovf2_gets(line, in)) {
-    //    // TODO: strip extra ## comments
-
-    //    if(hasprefix(line, "# valuedim:")) {
-    //        data.valuedim = atoi(&line[11]);
-    //        continue;
-    //    }
-    //    if(hasprefix(line, "# xnodes:")) {
-    //        data.xnodes = atoi(&line[9]);
-    //        continue;
-    //    }
-    //    if(hasprefix(line, "# ynodes:")) {
-    //        data.ynodes = atoi(&line[9]);
-    //        continue;
-    //    }
-    //    if(hasprefix(line, "# znodes:")) {
-    //        data.znodes = atoi(&line[9]);
-    //        continue;
-    //    }
-    //}
-
 
     //if (!streq(line, "# begin: data binary 4")){
     //	panic(line);
