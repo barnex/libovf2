@@ -34,6 +34,10 @@ THE SOFTWARE.
 
 #define LINEBUF 2047 // maximum header line length
 
+char* newLineBuf(){
+return (char*)malloc(LINEBUF+1);
+}
+
 void panic(const char *msg) {
     fprintf(stderr, "panic: %s\n", msg);
     abort();
@@ -53,7 +57,7 @@ bool hasprefix(const char *s, const char *prefix) {
     return (strstr(s, prefix) == s);
 }
 
-void strtolower(char *s) {
+void strToLower(char *s) {
     for(int i=0; s[i] != 0; i++) {
         s[i] = tolower(s[i]);
     }
@@ -75,9 +79,19 @@ void efread(void* ptr, size_t size, size_t count, FILE *stream) {
 }
 
 
-void ovf2_gets(char *line, FILE* in) {
-    fgets(line, LINEBUF, in);
-    strtolower(line);
+char* SprintD(const char *format, int d){
+	char *buf = (char*)malloc(LINEBUF+1);
+	snprintf(buf, LINEBUF, format, d);
+	return buf;
+}
+
+void ovf2_gets(ovf2_data * d, char *line, FILE* in) {
+    char *result = fgets(line, LINEBUF, in);
+	if (result != line){
+		d->err = SprintD("ovf2_readline: errno %d", errno);
+		return;
+	}
+    strToLower(line);
 }
 
 int ovf2_datalen(ovf2_data data) {
@@ -85,30 +99,35 @@ int ovf2_datalen(ovf2_data data) {
 }
 
 ovf2_data ovf2_read(FILE* in) {
-ovf2_data data = {err:NULL};
-    char line[LINEBUF+1] = {}; // init to 0s
+	ovf2_data d = {};
+    char line[LINEBUF+1] = {}; 
+
+	ovf2_gets(&d, line, in);
+	if (d.err != NULL){
+		return d;
+	}
 
     // read header
-    for (ovf2_gets(line, in); !hasprefix(line, "# begin: data"); ovf2_gets(line, in)) {
-        // TODO: strip extra ## comments
+    //for (ovf2_gets(line, in); !hasprefix(line, "# begin: data"); ovf2_gets(line, in)) {
+    //    // TODO: strip extra ## comments
 
-        if(hasprefix(line, "# valuedim:")) {
-            data.valuedim = atoi(&line[11]);
-            continue;
-        }
-        if(hasprefix(line, "# xnodes:")) {
-            data.xnodes = atoi(&line[9]);
-            continue;
-        }
-        if(hasprefix(line, "# ynodes:")) {
-            data.ynodes = atoi(&line[9]);
-            continue;
-        }
-        if(hasprefix(line, "# znodes:")) {
-            data.znodes = atoi(&line[9]);
-            continue;
-        }
-    }
+    //    if(hasprefix(line, "# valuedim:")) {
+    //        data.valuedim = atoi(&line[11]);
+    //        continue;
+    //    }
+    //    if(hasprefix(line, "# xnodes:")) {
+    //        data.xnodes = atoi(&line[9]);
+    //        continue;
+    //    }
+    //    if(hasprefix(line, "# ynodes:")) {
+    //        data.ynodes = atoi(&line[9]);
+    //        continue;
+    //    }
+    //    if(hasprefix(line, "# znodes:")) {
+    //        data.znodes = atoi(&line[9]);
+    //        continue;
+    //    }
+    //}
 
 
     //if (!streq(line, "# begin: data binary 4")){
@@ -116,31 +135,33 @@ ovf2_data data = {err:NULL};
     //}
 
     // control number
-    float control = 0;
-    efread(&control, sizeof(float), 1, in);
-    if (control != OVF2_CONTROL_NUMBER) {
-        panic("invalid ovf control number");
-    }
-
-    size_t nfloat = ovf2_datalen(data);
-    assert(nfloat > 0);
-    data.data = (float*)malloc(nfloat * sizeof(float));
-    efread(data.data, sizeof(float), nfloat, in);
-
-    ovf2_gets(line, in);
-    //if (!streq(line, "# end: data")) {
-    //    panic(line);
+    //float control = 0;
+    //efread(&control, sizeof(float), 1, in);
+    //if (control != OVF2_CONTROL_NUMBER) {
+    //    panic("invalid ovf control number");
     //}
 
-    return data;
+    //size_t nfloat = ovf2_datalen(data);
+    //assert(nfloat > 0);
+    //data.data = (float*)malloc(nfloat * sizeof(float));
+    //efread(data.data, sizeof(float), nfloat, in);
+
+    //ovf2_gets(line, in);
+    ////if (!streq(line, "# end: data")) {
+    ////    panic(line);
+    ////}
+
+    return d;
 }
 
 
 ovf2_data ovf2_readfile(const char *filename) {
     FILE *in = fopen(filename, "r");
     if(in == NULL) {
-        fprintf(stderr, "ovf2_readfile: failed to open %s: errno %d\n", filename, errno);
-        abort();
+		char *buf = newLineBuf();
+        snprintf(buf, LINEBUF, "ovf2_readfile: failed to open \"%s\": errno %d\n", filename, errno);
+		ovf2_data d = {err: buf};
+		return d;
     }
 
     ovf2_data data = ovf2_read(in);
