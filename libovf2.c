@@ -92,6 +92,10 @@ char* SprintS(const char *format, const char * s){
 	return buf;
 }
 
+bool ovfIsSpace(char c){
+	return c == ' ' || c == '\t';
+}
+
 /* Read header line, make lowercase and trim whitespace and comment characters.
  * Set possible error message in d->err. 
  * E.g.:
@@ -114,7 +118,7 @@ void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
 
 	// remove leading whitespace
 	int start=0; 
-	while(line[start] == ' ' || line[start] == '\t'){
+	while(ovfIsSpace(line[start])){
 		start++;
 	}
 	memmove(line, &line[start], BUFLEN - start);
@@ -138,13 +142,30 @@ void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
     strToLower(line);
 }
 
+/* retrieves value from "key: value" pair.
+ * trims value leading whitespace
+ */
+const char* hdrVal(const char *line){
+	int start = 0;
+	while(line[start] != ':'){
+		start++;
+	}
+	start++; // skip the ':'
+	// trim key whitespace
+	while(ovfIsSpace(line[start])){
+		start++;
+	}
+	return &line[start];
+}
+
 
 ovf2_data ovf2_read(FILE* in) {
 	ovf2_data d = {};
     char line[BUFLEN+1] = {}; 
 
-	for(ovf2_readLine(&d, line, in); d.err == NULL && !hasprefix(line, "begin: data"); ovf2_readLine(&d, line, in)){
+	for(ovf2_readLine(&d, line, in); d.err == NULL; ovf2_readLine(&d, line, in)){
 		printf("\"%s\"\n", line);
+		printf("value:\"%s\"\n", hdrVal(line));
 	}
 
 	if (d.err != NULL){
