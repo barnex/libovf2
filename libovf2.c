@@ -198,6 +198,15 @@ ovf2_data ovf2_read(FILE* in) {
 				snprintf(d.err, BUFLEN, "ovf2_read: unsupported meshtype: \"%s\"", hdrVal(line));
 				return d;
 			}
+			continue;
+		}
+		if(hasPrefix(line, "segment count:")){
+			if(!strEq(hdrVal(line), "1")){
+				d.err = newLineBuf();	
+				snprintf(d.err, BUFLEN, "ovf2_read: unsupported segment count: \"%s\"", hdrVal(line));
+				return d;
+			}
+			continue;
 		}
     }
 
@@ -247,6 +256,8 @@ ovf2_data ovf2_read(FILE* in) {
 		snprintf(d.err, BUFLEN, "ovf2_read: expected \"end: data <format>\", got: \"%s\"", line);
 		return d;
     }
+
+	// ignore End: Segment
 
     return d;
 }
