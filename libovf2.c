@@ -147,13 +147,30 @@ const char* hdrVal(const char *line){
 	return &line[start];
 }
 
+// read nfloat floats from in to d->data.
+// store possible error message in d->err.
+void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
+    int ret = fread(d->data, sizeof(float), nfloat, in);
+	if(ret != nfloat){
+		d->err = newLineBuf();
+		snprintf(d->err, BUFLEN, "ovf2_read: input error: errno %d", errno);
+	}
+}
+
 
 ovf2_data ovf2_read(FILE* in) {
 	ovf2_data d = {};
     char line[BUFLEN+1] = {}; 
 
-	for(ovf2_readLine(&d, line, in); d.err == NULL; ovf2_readLine(&d, line, in)){
+	ovf2_readLine(&d, line, in);
+	if( !strEq(line, "oommf ovf 2.0") ){
+		d.err = newLineBuf();
+		snprintf(d.err, BUFLEN, "ovf2_read: invalid format: \"%s\"", line);
+		return d;
+	}
 
+	for(; d.err == NULL; ovf2_readLine(&d, line, in)){
+		
 		// stop at begin data section
 		if(hasPrefix(line, "begin:") && hasPrefix(hdrVal(line), "data")){
 			break;
@@ -175,6 +192,13 @@ ovf2_data ovf2_read(FILE* in) {
             d.znodes = atoi(hdrVal(line));
             continue;
         }
+		if(hasPrefix(line, "meshtype:")){
+			if(!strEq(hdrVal(line), "rectangular")){
+				d.err = newLineBuf();	
+				snprintf(d.err, BUFLEN, "ovf2_read: unsupported meshtype: \"%s\"", hdrVal(line));
+				return d;
+			}
+		}
     }
 
 	if(d.valuedim <= 0){
@@ -187,30 +211,42 @@ ovf2_data ovf2_read(FILE* in) {
 		snprintf(d.err, BUFLEN, "ovf2_read: invalid grid size: %d x %d x %d", d.xnodes, d.ynodes, d.znodes);
 	}
 
+    if (!strEq(line, "begin: data binary 4")){
+		d.err = newLineBuf();	
+    	snprintf(d.err, BUFLEN, "ovf2_read: expected \"Begin: Data Binary 4\", got: \"%s\"", line);
+    }
+
 	if (d.err != NULL){
 		return d;
 	}
 
-    //if (!streq(line, "# begin: data binary 4")){
-    //	panic(line);
-    //}
 
-    // control number
-    //float control = 0;
-    //efread(&control, sizeof(float), 1, in);
-    //if (control != OVF2_CONTROL_NUMBER) {
-    //    panic("invalid ovf control number");
-    //}
+    size_t nfloat = ovf2_datalen(d);
+    assert(nfloat > 0);
+    d.data = (float*)malloc(nfloat * sizeof(float));
 
-    //size_t nfloat = ovf2_datalen(data);
-    //assert(nfloat > 0);
-    //data.data = (float*)malloc(nfloat * sizeof(float));
-    //efread(data.data, sizeof(float), nfloat, in);
+    // read control number into data array, overwrite with actual data later.
+    ovf2_readFloats(&d, 1, in);
+    if (d.data[0] != OVF2_CONTROL_NUMBER) {
+        d.err = newLineBuf();
+		snprintf(d.err, BUFLEN, "invalid ovf control number: %f:", d.data[0]);
+		free(d.data);
+		d.data = NULL;
+		return d;
+    }
 
-    //ovf2_gets(line, in);
-    ////if (!streq(line, "# end: data")) {
-    ////    panic(line);
-    ////}
+	// read rest of data
+    ovf2_readFloats(&d, nfloat, in);
+	if (d.err != NULL){
+		return d;
+	}
+
+    ovf2_readLine(&d, line, in);
+    if (!hasPrefix(line, "end: data")) {
+        d.err = newLineBuf();
+		snprintf(d.err, BUFLEN, "ovf2_read: expected \"end: data <format>\", got: \"%s\"", line);
+		return d;
+    }
 
     return d;
 }
