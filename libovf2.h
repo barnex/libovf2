@@ -31,10 +31,10 @@ THE SOFTWARE.
 /* Holds stripped-down content of an OVF file
  * (relevant header sections + data).  */
 typedef struct {
-    char *err;                  // error message, if any
-    int valuedim;               // number of data components
-    int xnodes, ynodes, znodes; // grid size
-    float *data;                // data array, without control number
+	char *err;                  /* error message, if any              */
+	int valuedim;               /* number of data components          */
+	int xnodes, ynodes, znodes; /* grid size                          */
+	float *data;                /* data array, without control number */
 } ovf2_data;
 
 
