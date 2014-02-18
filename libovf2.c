@@ -32,10 +32,10 @@ THE SOFTWARE.
 #include <assert.h>
 #include "libovf2.h"
 
-#define LINEBUF 2047 // maximum header line length
+#define BUFLEN 2047 // maximum header line length
 
 char* newLineBuf(){
-return (char*)malloc(LINEBUF+1);
+return (char*)malloc(BUFLEN+1);
 }
 
 void panic(const char *msg) {
@@ -80,33 +80,78 @@ void efread(void* ptr, size_t size, size_t count, FILE *stream) {
 
 
 char* SprintD(const char *format, int d){
-	char *buf = (char*)malloc(LINEBUF+1);
-	snprintf(buf, LINEBUF, format, d);
+	char *buf = (char*)malloc(BUFLEN+1);
+	snprintf(buf, BUFLEN, format, d);
 	return buf;
 }
 
-void ovf2_gets(ovf2_data * d, char *line, FILE* in) {
-    char *result = fgets(line, LINEBUF, in);
+
+char* SprintS(const char *format, const char * s){
+	char *buf = (char*)malloc(BUFLEN+1);
+	snprintf(buf, BUFLEN, format, s);
+	return buf;
+}
+
+/* Read header line, make lowercase and trim whitespace and comment characters.
+ * Set possible error message in d->err. 
+ * E.g.:
+ * 	# XNodes:  7 ## comment
+ * ->
+ *  xnodes: 7 
+ */
+void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
+    char *result = fgets(line, BUFLEN, in);
 	if (result != line){
 		d->err = SprintD("ovf2_readline: errno %d", errno);
 		return;
 	}
+
+	// remove leading '#'
+	if (line[0] != '#'){
+		d->err = SprintS("ovf2: invalid header line: \"%s\"", line);
+	}
+	line[0] = ' '; // replace leading '#' by space that will be trimmed.
+
+	// remove leading whitespace
+	int start=0; 
+	while(line[start] == ' ' || line[start] == '\t'){
+		start++;
+	}
+	memmove(line, &line[start], BUFLEN - start);
+	
+	// remove tailing comments, whitespace and newline
+	// we treat a single '#' as a comment, even though OOMMF specifies '##'
+	int end=0;
+	while(line[end] != '#' && line[end] != '\n'){
+		end++;
+	}
+	line[end] = 0;
+
+	// trim trailing whitespace
+	end--;
+	while(end >= 0 && isspace(line[end])){
+		line[end] = 0;
+		end--;
+	}
+
+	// finally, lowercase to avoid confusion between End Data, End data, end Data,...
     strToLower(line);
 }
 
-int ovf2_datalen(ovf2_data data) {
-    return data.valuedim * data.xnodes * data.ynodes * data.znodes;
-}
 
 ovf2_data ovf2_read(FILE* in) {
 	ovf2_data d = {};
-    char line[LINEBUF+1] = {}; 
+    char line[BUFLEN+1] = {}; 
 
-	ovf2_gets(&d, line, in);
+	for(ovf2_readLine(&d, line, in); d.err == NULL && !hasprefix(line, "begin: data"); ovf2_readLine(&d, line, in)){
+		printf("\"%s\"\n", line);
+	}
+
 	if (d.err != NULL){
 		return d;
 	}
 
+	
     // read header
     //for (ovf2_gets(line, in); !hasprefix(line, "# begin: data"); ovf2_gets(line, in)) {
     //    // TODO: strip extra ## comments
@@ -159,7 +204,7 @@ ovf2_data ovf2_readfile(const char *filename) {
     FILE *in = fopen(filename, "r");
     if(in == NULL) {
 		char *buf = newLineBuf();
-        snprintf(buf, LINEBUF, "ovf2_readfile: failed to open \"%s\": errno %d\n", filename, errno);
+        snprintf(buf, BUFLEN, "ovf2_readfile: failed to open \"%s\": errno %d\n", filename, errno);
 		ovf2_data d = {err: buf};
 		return d;
     }
@@ -238,4 +283,9 @@ void ovf2_free(ovf2_data *d) {
     d->xnodes = 0;
     d->ynodes = 0;
     d->znodes = 0;
+}
+
+
+int ovf2_datalen(ovf2_data data) {
+    return data.valuedim * data.xnodes * data.ynodes * data.znodes;
 }

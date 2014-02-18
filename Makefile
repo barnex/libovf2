@@ -3,4 +3,4 @@ all:
 	gcc -std=c99 -Wall -Werror *.c -o ovf2tool
 
 test: all
-	./ovf2tool testdata/*.ovf
+	./ovf2tool testdata_good/*.ovf

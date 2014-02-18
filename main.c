@@ -13,6 +13,7 @@ int main(int argc, char **argv) {
 		fprintf(stdout, "%s:\n", argv[i]);
         ovf2_data d = ovf2_readfile(argv[i]);
         ovf2_write(stdout, d);
+		fprintf(stdout, "\n");
         ovf2_free(&d);
     }
     return 0;
