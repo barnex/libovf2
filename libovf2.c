@@ -151,37 +151,37 @@ ovf2_data ovf2_makeData(){
 ovf2_data ovf2_read(FILE* in) {
 	ovf2_data d = ovf2_makeData();
 	char line[BUFLEN+1] = {}; 
-
+	
 	ovf2_readLine(&d, line, in);
 	if( !ovf2_strEq(line, "oommf ovf 2.0") ){
 		d.err = ovf2_buf();
 		ovf2_sn(sprintf(d.err, "ovf2_read: invalid format: \"%s\"", line));
 		return d;
 	}
-
+	
 	for(; d.err == NULL; ovf2_readLine(&d, line, in)){
 		
 		/* stop at begin data section */
 		if(ovf2_hasPrefix(line, "begin:") && ovf2_hasPrefix(ovf2_hdrVal(line), "data")){
 			break;
 		}
-
-        if(ovf2_hasPrefix(line, "valuedim:")) {
-            d.valuedim = atoi(ovf2_hdrVal(line));
-            continue;
-        }
-        if(ovf2_hasPrefix(line, "xnodes:")) {
-            d.xnodes = atoi(ovf2_hdrVal(line));
-            continue;
-        }
-        if(ovf2_hasPrefix(line, "ynodes:")) {
-            d.ynodes = atoi(ovf2_hdrVal(line));
-            continue;
-        }
-        if(ovf2_hasPrefix(line, "znodes:")) {
-            d.znodes = atoi(ovf2_hdrVal(line));
-            continue;
-        }
+		
+		if(ovf2_hasPrefix(line, "valuedim:")) {
+			d.valuedim = atoi(ovf2_hdrVal(line));
+			continue;
+		}
+		if(ovf2_hasPrefix(line, "xnodes:")) {
+			d.xnodes = atoi(ovf2_hdrVal(line));
+			continue;
+		}
+		if(ovf2_hasPrefix(line, "ynodes:")) {
+			d.ynodes = atoi(ovf2_hdrVal(line));
+			continue;
+		}
+		if(ovf2_hasPrefix(line, "znodes:")) {
+			d.znodes = atoi(ovf2_hdrVal(line));
+			continue;
+		}
 		if(ovf2_hasPrefix(line, "meshtype:")){
 			if(!ovf2_strEq(ovf2_hdrVal(line), "rectangular")){
 				d.err = ovf2_buf();	
@@ -198,7 +198,7 @@ ovf2_data ovf2_read(FILE* in) {
 			}
 			continue;
 		}
-    }
+    	}
 
 	if(d.valuedim <= 0){
 		d.err = ovf2_buf();
@@ -210,76 +210,74 @@ ovf2_data ovf2_read(FILE* in) {
 		ovf2_sn(sprintf(d.err, "ovf2_read: invalid grid size: %d x %d x %d", d.xnodes, d.ynodes, d.znodes));
 	}
 
-    if (!ovf2_strEq(line, "begin: data binary 4")){
+	if (!ovf2_strEq(line, "begin: data binary 4")){
 		d.err = ovf2_buf();	
-    	ovf2_sn(sprintf(d.err, "ovf2_read: expected \"Begin: Data Binary 4\", got: \"%s\"", line));
-    }
+		ovf2_sn(sprintf(d.err, "ovf2_read: expected \"Begin: Data Binary 4\", got: \"%s\"", line));
+	}
 
 	if (d.err != NULL){
 		return d;
 	}
 
-
-    size_t nfloat = ovf2_datalen(d);
-    assert(nfloat > 0);
-    d.data = (float*)malloc(nfloat * sizeof(float));
-
-    /* read control number into data array, overwrite with actual data later. */
-    ovf2_readFloats(&d, 1, in);
-    if (d.data[0] != OVF2_CONTROL_NUMBER) {
-        d.err = ovf2_buf();
+	size_t nfloat = ovf2_datalen(d);
+	assert(nfloat > 0);
+	d.data = (float*)malloc(nfloat * sizeof(float));
+	
+	/* read control number into data array, overwrite with actual data later. */
+	ovf2_readFloats(&d, 1, in);
+	if (d.data[0] != OVF2_CONTROL_NUMBER) {
+		d.err = ovf2_buf();
 		ovf2_sn(sprintf(d.err, "invalid ovf control number: %f:", d.data[0]));
 		free(d.data);
 		d.data = NULL;
 		return d;
-    }
-
+	}
+	
 	/* read rest of data */
-    ovf2_readFloats(&d, nfloat, in);
+	ovf2_readFloats(&d, nfloat, in);
 	if (d.err != NULL){
-		return d;
+   		return d;
 	}
 
-    ovf2_readLine(&d, line, in);
-    if (!ovf2_hasPrefix(line, "end: data")) {
-        d.err = ovf2_buf();
+	ovf2_readLine(&d, line, in);
+	if (!ovf2_hasPrefix(line, "end: data")) {
+		d.err = ovf2_buf();
 		ovf2_sn(sprintf(d.err, "ovf2_read: expected \"end: data <format>\", got: \"%s\"", line));
 		return d;
-    }
-
+	}
+	
 	/* ignore End: Segment */
-
-    return d;
+	return d;
 }
 
 
 ovf2_data ovf2_readfile(const char *filename) {
-    FILE *in = fopen(filename, "r");
-    if(in == NULL) {
+	FILE *in = fopen(filename, "r");
+	if(in == NULL) {
 		char *buf = ovf2_buf();
-        ovf2_sn(sprintf(buf, "ovf2_readfile: failed to open \"%s\": errno %d\n", filename, errno));
+		ovf2_sn(sprintf(buf, "ovf2_readfile: failed to open \"%s\": errno %d\n", filename, errno));
 		ovf2_data d = ovf2_makeData();
 		return d;
-    }
-
-    ovf2_data data = ovf2_read(in);
-    fclose(in);
-    return data;
+	}
+	
+	ovf2_data data = ovf2_read(in);
+	fclose(in);
+	return data;
 }
 
 
 float ovf2_get(ovf2_data *data, int c, int x, int y, int z) {
-    int Nx = data->xnodes;
-    int Ny = data->ynodes;
-    int Nz = data->znodes;
-    int Nc = data->valuedim;
-
-    assert(x >= 0 && x < Nx &&
-           y >= 0 && y < Ny &&
-           z >= 0 && z < Nz &&
-           c >= 0 && c < Nc);
-
-    return data->data[((c*Nz+z)*Ny + y)*Nx + x];
+	int Nx = data->xnodes;
+	int Ny = data->ynodes;
+	int Nz = data->znodes;
+	int Nc = data->valuedim;
+	
+	assert(x >= 0 && x < Nx &&
+	       y >= 0 && y < Ny &&
+	       z >= 0 && z < Nz &&
+	       c >= 0 && c < Nc);
+	
+	return data->data[((c*Nz+z)*Ny + y)*Nx + x];
 }
 
 
@@ -297,32 +295,32 @@ void ovf2_write(FILE* out, ovf2_data data) {
 	int x, y, z, c;
 	float v;
 
-    if(data.err != NULL) {
-        efputs(data.err, out);
-        return;
-    }
+	if(data.err != NULL) {
+	    efputs(data.err, out);
+	    return;
+	}
 
-    efputs("# OOMMF OVF 2.0\n", out);
-    efputs("# Segment count: 1\n", out);
-    efputs("# Begin: Segment\n", out);
-    efputs("# Begin: Header\n", out);
-    fprintf(out, "# valuedim: %d\n", data.valuedim); /* TODO: e */
-    fprintf(out, "# xnodes: %d\n", data.xnodes); 
-    fprintf(out, "# ynodes: %d\n", data.ynodes); 
-    fprintf(out, "# znodes: %d\n", data.znodes); 
-
-    for(z=0; z<data.znodes; z++) {
-        for(y=0; y<data.ynodes; y++) {
-            for(x=0; x<data.xnodes; x++) {
-                for(c=0; c<data.valuedim; c++) {
-                    v = ovf2_get(&data, c, x, y, z);
-                    fprintf(out, "%f ", v);
-                }
-            }
-            efputs("\n", out);
-        }
-        efputs("\n", out);
-    }
+	efputs("# OOMMF OVF 2.0\n", out);
+	efputs("# Segment count: 1\n", out);
+	efputs("# Begin: Segment\n", out);
+	efputs("# Begin: Header\n", out);
+	fprintf(out, "# valuedim: %d\n", data.valuedim); /* TODO: e */
+	fprintf(out, "# xnodes: %d\n", data.xnodes); 
+	fprintf(out, "# ynodes: %d\n", data.ynodes); 
+	fprintf(out, "# znodes: %d\n", data.znodes); 
+	
+	for(z=0; z<data.znodes; z++) {
+		for(y=0; y<data.ynodes; y++) {
+			for(x=0; x<data.xnodes; x++) {
+				for(c=0; c<data.valuedim; c++) {
+					v = ovf2_get(&data, c, x, y, z);
+					fprintf(out, "%f ", v);
+				}
+			}
+			efputs("\n", out);
+	    	}
+		efputs("\n", out);
+	}
 }
 
 void ovf2_writeffile(const char *filename, ovf2_data data) {
@@ -337,21 +335,21 @@ void ovf2_writeffile(const char *filename, ovf2_data data) {
 }
 
 void ovf2_free(ovf2_data *d) {
-    if(d->err != NULL) {
-        free(d->err);
-        d->err = NULL;
-    }
-    if(d->data != NULL) {
-        free(d->data);
-        d->data = NULL;
-    }
-    d->valuedim = 0;
-    d->xnodes = 0;
-    d->ynodes = 0;
-    d->znodes = 0;
+	if(d->err != NULL) {
+		free(d->err);
+		d->err = NULL;
+	}
+	if(d->data != NULL) {
+		free(d->data);
+		d->data = NULL;
+	}
+	d->valuedim = 0;
+	d->xnodes = 0;
+	d->ynodes = 0;
+	d->znodes = 0;
 }
 
 
 int ovf2_datalen(ovf2_data data) {
-    return data.valuedim * data.xnodes * data.ynodes * data.znodes;
+	return data.valuedim * data.xnodes * data.ynodes * data.znodes;
 }
