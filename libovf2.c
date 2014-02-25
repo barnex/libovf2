@@ -33,24 +33,24 @@ THE SOFTWARE.
 #define BUFLEN 2047 /* maximum header line length */
 
 /* internal: alloc line buffer. */
-char* ovf2_buf(){
+static char* ovf2_buf(){
 	return (char*)malloc(BUFLEN+1);
 }
 
 /* internal: string equals */
-bool ovf2_strEq(const char *a, const char *b) {
+static bool ovf2_strEq(const char *a, const char *b) {
 	assert(a!=NULL && b!=NULL);
 	return (strcmp(a, b) == 0);
 }
 
 /* internal: s has prefix prefix? */
-bool ovf2_hasPrefix(const char *s, const char *prefix) {
+static bool ovf2_hasPrefix(const char *s, const char *prefix) {
 	assert(s!=NULL && prefix!=NULL);
 	return (strstr(s, prefix) == s);
 }
 
 /* internal: overwrite s with lowercase version */
-void ovf2_toLower(char *s) {
+static void ovf2_toLower(char *s) {
 	int i;
 	for(i=0; s[i] != 0; i++) {
 		s[i] = tolower(s[i]);
@@ -58,14 +58,14 @@ void ovf2_toLower(char *s) {
 }
 
 /* internal: header whitespace characters */
-bool ovf2_isSpace(char c){
+static bool ovf2_isSpace(char c){
 	return c == ' ' || c == '\t';
 }
 
 /* internal: wrap around sprintf to catch buffer overflow.
    goal is to mimic snprintf which is not available below C99.
 */
-void ovf2_sn(int n){
+static void ovf2_sn(int n){
 	assert(n < BUFLEN);
 }
 
@@ -76,7 +76,7 @@ void ovf2_sn(int n){
    becomes
     xnodes: 7 
 */
-void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
+static void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
 	char *result = fgets(line, BUFLEN, in);
 	if (result != line){
 		d->err = ovf2_buf();
@@ -119,7 +119,7 @@ void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
 
 /* internal: retrieves value from "key: value" pair. 
    trims value leading whitespace */
-const char* ovf2_hdrVal(const char *line){
+static const char* ovf2_hdrVal(const char *line){
 	int start = 0;
 	while(line[start] != ':'){
 		start++;
@@ -134,7 +134,7 @@ const char* ovf2_hdrVal(const char *line){
 
 /* internal: read nfloat floats from in to d->data.
    store possible error message in d->err. */
-void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
+static void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
 	int ret = fread(d->data, sizeof(float), nfloat, in);
 	if(ret != nfloat){
 		d->err = ovf2_buf();
@@ -143,7 +143,7 @@ void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
 }
 
 /* internal: construct zero value. */
-ovf2_data ovf2_makeData(){
+static ovf2_data ovf2_makeData(){
 	ovf2_data d = {err: NULL, valuedim: 0, xnodes: 0, ynodes: 0, znodes: 0, data: NULL};
 	return d;
 }
@@ -281,7 +281,7 @@ float ovf2_get(ovf2_data *data, int c, int x, int y, int z) {
 }
 
 
-void efputs(const char *str, FILE *stream) {
+static void efputs(const char *str, FILE *stream) {
     int n = fputs(str, stream);
     if (n < 0) {
         fprintf(stderr, "fputs(\"%s, %p\"): error %d\n", str, stream, n);
