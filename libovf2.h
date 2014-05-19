@@ -58,10 +58,10 @@ int ovf2_datalen(ovf2_data data);
 float ovf2_get(ovf2_data *data, int c, int x, int y, int z);
 
 
-/* write for debug purposes, not OVF2 compatible. */
+/* write in simplified ovf2 text format, compatible with mumax3-convert. */
 void ovf2_write(FILE* out, ovf2_data data);
 
-/* write for debug purposes, not OVF2 compatible. */
+/* write in simplified ovf2 text format, compatible with mumax3-convert. */
 void ovf2_writefile(const char *filename, ovf2_data data);
 
 /* First number in data section.

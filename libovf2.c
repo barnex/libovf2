@@ -308,6 +308,9 @@ void ovf2_write(FILE* out, ovf2_data data) {
 	fprintf(out, "# xnodes: %d\n", data.xnodes); 
 	fprintf(out, "# ynodes: %d\n", data.ynodes); 
 	fprintf(out, "# znodes: %d\n", data.znodes); 
+
+	fprintf(out, "# End: Header\n");
+	fprintf(out, "# Begin: Data Text\n");
 	
 	for(z=0; z<data.znodes; z++) {
 		for(y=0; y<data.ynodes; y++) {
@@ -321,6 +324,9 @@ void ovf2_write(FILE* out, ovf2_data data) {
 	    	}
 		efputs("\n", out);
 	}
+
+	fprintf(out, "# End: Data Text\n");
+	fprintf(out, "# End: Segment\n");
 }
 
 void ovf2_writefile(const char *filename, ovf2_data data) {
