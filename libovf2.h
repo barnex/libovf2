@@ -62,7 +62,7 @@ float ovf2_get(ovf2_data *data, int c, int x, int y, int z);
 void ovf2_write(FILE* out, ovf2_data data);
 
 /* write for debug purposes, not OVF2 compatible. */
-void ovf2_writeffile(const char *filename, ovf2_data data);
+void ovf2_writefile(const char *filename, ovf2_data data);
 
 /* First number in data section.
  * OVF specification, OOMMF user's guide 1.2a4, page 223. */

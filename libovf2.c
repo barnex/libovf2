@@ -323,7 +323,7 @@ void ovf2_write(FILE* out, ovf2_data data) {
 	}
 }
 
-void ovf2_writeffile(const char *filename, ovf2_data data) {
+void ovf2_writefile(const char *filename, ovf2_data data) {
     FILE *out = fopen(filename, "w+");
 
     if(out == NULL) {
