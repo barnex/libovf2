@@ -33,24 +33,24 @@ THE SOFTWARE.
 #define BUFLEN 2047 /* maximum header line length */
 
 /* internal: alloc line buffer. */
-static char* ovf2_buf() {
+static char* buf() {
 	return (char*)malloc(BUFLEN+1);
 }
 
 /* internal: string equals */
-static bool ovf2_strEq(const char *a, const char *b) {
+static bool strEq(const char *a, const char *b) {
 	assert(a!=NULL && b!=NULL);
 	return (strcmp(a, b) == 0);
 }
 
 /* internal: s has prefix prefix? */
-static bool ovf2_hasPrefix(const char *s, const char *prefix) {
+static bool hasPrefix(const char *s, const char *prefix) {
 	assert(s!=NULL && prefix!=NULL);
 	return (strstr(s, prefix) == s);
 }
 
 /* internal: overwrite s with lowercase version */
-static void ovf2_toLower(char *s) {
+static void toLower(char *s) {
 	int i;
 	for(i=0; s[i] != 0; i++) {
 		s[i] = tolower(s[i]);
@@ -58,14 +58,14 @@ static void ovf2_toLower(char *s) {
 }
 
 /* internal: header whitespace characters */
-static bool ovf2_isSpace(char c) {
+static bool isSpace(char c) {
 	return c == ' ' || c == '\t';
 }
 
 /* internal: wrap around sprintf to catch buffer overflow.
    goal is to mimic snprintf which is not available below C99.
 */
-static void ovf2_sn(int n) {
+static void sn(int n) {
 	assert(n < BUFLEN);
 }
 
@@ -76,24 +76,24 @@ static void ovf2_sn(int n) {
    becomes
     xnodes: 7
 */
-static void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
+static void readLine(ovf2_data * d, char *line, FILE* in) {
 	char *result = fgets(line, BUFLEN, in);
 	if (result != line) {
-		d->err = ovf2_buf();
-		ovf2_sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
+		d->err = buf();
+		sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
 		return;
 	}
 
 	/* remove leading '#' */
 	if (line[0] != '#') {
-		d->err = ovf2_buf();
-		ovf2_sn(sprintf(d->err, "ovf2_read: invalid header line: \"%s\"", line));
+		d->err = buf();
+		sn(sprintf(d->err, "ovf2_read: invalid header line: \"%s\"", line));
 	}
 	line[0] = ' '; /* replace leading '#' by space which will be trimmed. */
 
 	/* remove leading whitespace */
 	int start=0;
-	while(ovf2_isSpace(line[start])) {
+	while(isSpace(line[start])) {
 		start++;
 	}
 	memmove(line, &line[start], BUFLEN - start);
@@ -114,45 +114,46 @@ static void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
 	}
 
 	/* finally, lowercase to avoid confusion between End Data, End data, end Data,... */
-	ovf2_toLower(line);
+	toLower(line);
 }
 
 /* internal: retrieves value from "key: value" pair.
    trims value leading whitespace */
-static const char* ovf2_hdrVal(const char *line) {
+static const char* hdrVal(const char *line) {
 	int start = 0;
 	while(line[start] != ':') {
 		start++;
 	}
 	start++; /* skip the ':' */
 	/* trim key whitespace */
-	while(ovf2_isSpace(line[start])) {
+	while(isSpace(line[start])) {
 		start++;
 	}
 	return &line[start];
 }
 
-static float ovf2_readFloat(ovf2_data *d, FILE *in) {
-	float buf = 0;
-	int ret = fread(&buf, sizeof(float), 1, in);
+/* internal: read a single float from in, set d->err on error. */
+static float readFloat(ovf2_data *d, FILE *in) {
+	float f = 0;
+	int ret = fread(&f, sizeof(float), 1, in);
 	if (ret != 1) {
-		d->err = ovf2_buf();
-		ovf2_sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
+		d->err = buf();
+		sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
 		return 0.0f;
 	}
-	return buf;
+	return f;
 }
 
-/* internal: read nfloat floats from in to d->data.
+/* internal: read the binary data section from in to d->data.
    store possible error message in d->err. */
-static void ovf2_readData(ovf2_data *d, FILE *in) {
+static void readData(ovf2_data *d, FILE *in) {
 	int iz, iy, ix, ic;
 
 	for(iz=0; iz<d->znodes; iz++) {
 		for(iy=0; iy<d->ynodes; iy++) {
 			for(ix=0; ix<d->xnodes; ix++) {
 				for(ic=0; ic<d->valuedim; ic++) {
-					float v = ovf2_readFloat(d, in);
+					float v = readFloat(d, in);
 					if (d->err != NULL) {
 						return;
 					}
@@ -164,59 +165,59 @@ static void ovf2_readData(ovf2_data *d, FILE *in) {
 }
 
 
-
 /* internal: construct zero value. */
-static ovf2_data ovf2_makeData() {
+static ovf2_data makeData() {
 ovf2_data d = {err: NULL, valuedim: 0, xnodes: 0, ynodes: 0, znodes: 0, data: NULL};
 	return d;
 }
 
+
 ovf2_data ovf2_read(FILE* in) {
-	ovf2_data d = ovf2_makeData();
+	ovf2_data d = makeData();
 	char line[BUFLEN+1] = {};
 
-	ovf2_readLine(&d, line, in);
-	if( !ovf2_strEq(line, "oommf ovf 2.0") ) {
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "ovf2_read: invalid format: \"%s\"", line));
+	readLine(&d, line, in);
+	if( !strEq(line, "oommf ovf 2.0") ) {
+		d.err = buf();
+		sn(sprintf(d.err, "ovf2_read: invalid format: \"%s\"", line));
 		return d;
 	}
 
-	for(; d.err == NULL; ovf2_readLine(&d, line, in)) {
+	for(; d.err == NULL; readLine(&d, line, in)) {
 
 		/* stop at begin data section */
-		if(ovf2_hasPrefix(line, "begin:") && ovf2_hasPrefix(ovf2_hdrVal(line), "data")) {
+		if(hasPrefix(line, "begin:") && hasPrefix(hdrVal(line), "data")) {
 			break;
 		}
 
-		if(ovf2_hasPrefix(line, "valuedim:")) {
-			d.valuedim = atoi(ovf2_hdrVal(line));
+		if(hasPrefix(line, "valuedim:")) {
+			d.valuedim = atoi(hdrVal(line));
 			continue;
 		}
-		if(ovf2_hasPrefix(line, "xnodes:")) {
-			d.xnodes = atoi(ovf2_hdrVal(line));
+		if(hasPrefix(line, "xnodes:")) {
+			d.xnodes = atoi(hdrVal(line));
 			continue;
 		}
-		if(ovf2_hasPrefix(line, "ynodes:")) {
-			d.ynodes = atoi(ovf2_hdrVal(line));
+		if(hasPrefix(line, "ynodes:")) {
+			d.ynodes = atoi(hdrVal(line));
 			continue;
 		}
-		if(ovf2_hasPrefix(line, "znodes:")) {
-			d.znodes = atoi(ovf2_hdrVal(line));
+		if(hasPrefix(line, "znodes:")) {
+			d.znodes = atoi(hdrVal(line));
 			continue;
 		}
-		if(ovf2_hasPrefix(line, "meshtype:")) {
-			if(!ovf2_strEq(ovf2_hdrVal(line), "rectangular")) {
-				d.err = ovf2_buf();
-				ovf2_sn(sprintf(d.err, "ovf2_read: unsupported meshtype: \"%s\"", ovf2_hdrVal(line)));
+		if(hasPrefix(line, "meshtype:")) {
+			if(!strEq(hdrVal(line), "rectangular")) {
+				d.err = buf();
+				sn(sprintf(d.err, "ovf2_read: unsupported meshtype: \"%s\"", hdrVal(line)));
 				return d;
 			}
 			continue;
 		}
-		if(ovf2_hasPrefix(line, "segment count:")) {
-			if(!ovf2_strEq(ovf2_hdrVal(line), "1")) {
-				d.err = ovf2_buf();
-				ovf2_sn(sprintf(d.err, "ovf2_read: unsupported segment count: \"%s\"", ovf2_hdrVal(line)));
+		if(hasPrefix(line, "segment count:")) {
+			if(!strEq(hdrVal(line), "1")) {
+				d.err = buf();
+				sn(sprintf(d.err, "ovf2_read: unsupported segment count: \"%s\"", hdrVal(line)));
 				return d;
 			}
 			continue;
@@ -224,18 +225,18 @@ ovf2_data ovf2_read(FILE* in) {
 	}
 
 	if(d.valuedim <= 0) {
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "ovf2_read: invalid valuedim: %d", d.valuedim));
+		d.err = buf();
+		sn(sprintf(d.err, "ovf2_read: invalid valuedim: %d", d.valuedim));
 	}
 
 	if(d.xnodes <= 0 || d.ynodes <= 0 || d.znodes <= 0) {
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "ovf2_read: invalid grid size: %d x %d x %d", d.xnodes, d.ynodes, d.znodes));
+		d.err = buf();
+		sn(sprintf(d.err, "ovf2_read: invalid grid size: %d x %d x %d", d.xnodes, d.ynodes, d.znodes));
 	}
 
-	if (!ovf2_strEq(line, "begin: data binary 4")) {
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "ovf2_read: expected \"Begin: Data Binary 4\", got: \"%s\"", line));
+	if (!strEq(line, "begin: data binary 4")) {
+		d.err = buf();
+		sn(sprintf(d.err, "ovf2_read: expected \"Begin: Data Binary 4\", got: \"%s\"", line));
 	}
 
 	if (d.err != NULL) {
@@ -247,28 +248,28 @@ ovf2_data ovf2_read(FILE* in) {
 	d.data = (float*)malloc(nfloat * sizeof(float));
 
 	/* read control number into data array, overwrite with actual data later. */
-	float control = ovf2_readFloat(&d, in);
+	float control = readFloat(&d, in);
 	if (d.err != NULL) {
 		return d;
 	}
 	if (control != OVF2_CONTROL_NUMBER) {
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "invalid ovf control number: %f:", d.data[0]));
+		d.err = buf();
+		sn(sprintf(d.err, "invalid ovf control number: %f:", d.data[0]));
 		free(d.data);
 		d.data = NULL;
 		return d;
 	}
 
 	/* read rest of data */
-	ovf2_readData(&d, in);
+	readData(&d, in);
 	if (d.err != NULL) {
 		return d;
 	}
 
-	ovf2_readLine(&d, line, in);
-	if (!ovf2_hasPrefix(line, "end: data")) {
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "ovf2_read: expected \"end: data <format>\", got: \"%s\"", line));
+	readLine(&d, line, in);
+	if (!hasPrefix(line, "end: data")) {
+		d.err = buf();
+		sn(sprintf(d.err, "ovf2_read: expected \"end: data <format>\", got: \"%s\"", line));
 		return d;
 	}
 
@@ -280,9 +281,9 @@ ovf2_data ovf2_read(FILE* in) {
 ovf2_data ovf2_readfile(const char *filename) {
 	FILE *in = fopen(filename, "r");
 	if(in == NULL) {
-		ovf2_data d = ovf2_makeData();
-		d.err = ovf2_buf();
-		ovf2_sn(sprintf(d.err, "ovf2_readfile: failed to open \"%s\": %s\n", filename, strerror(errno)));
+		ovf2_data d = makeData();
+		d.err = buf();
+		sn(sprintf(d.err, "ovf2_readfile: failed to open \"%s\": %s\n", filename, strerror(errno)));
 		return d;
 	}
 
@@ -311,6 +312,7 @@ float *ovf2_addr(ovf2_data *data, int c, int x, int y, int z) {
 }
 
 
+/* internal: put string, abort on error */
 static void efputs(const char *str, FILE *stream) {
 	int n = fputs(str, stream);
 	if (n < 0) {
