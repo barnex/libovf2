@@ -1,0 +1,11 @@
+// generate ovf file to test indexing
+
+SetCellSize(1e-9, 2e-9, 3e-4)
+SetGridSize(16, 8, 4)
+
+m=uniform(0,0,0)
+m.setCell(1, 2, 3, vector(4, 5, 6))
+
+saveas(m, "../vector123.ovf")
+saveas(m.comp(0), "../scalar123.ovf")
+
