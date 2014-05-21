@@ -46,7 +46,7 @@ ovf2_data ovf2_readfile(const char *filename);
  * ovf2_data.err contains an error message if something went wrong.  */
 ovf2_data ovf2_read(FILE* in);
 
-/* frees all allocations associated with data, 
+/* frees all allocations associated with data,
  * and sets all fields to 0 to avoid accidental use.*/
 void ovf2_free(ovf2_data *data);
 
