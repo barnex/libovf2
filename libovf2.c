@@ -32,9 +32,22 @@ THE SOFTWARE.
 
 #define BUFLEN 2047 /* maximum header line length */
 
+/* internal: malloc with abort on out-of-memory, init to zero */
+void *emalloc(size_t bytes) {
+	void *ptr = malloc(bytes);
+	if (ptr == NULL) {
+		fprintf(stderr, "out of memory (allocating %ld bytes)\n", bytes);
+		fflush(stdout);
+		fflush(stderr);
+		abort();
+	}
+	memset(ptr, 0, bytes);
+	return ptr;
+}
+
 /* internal: alloc line buffer. */
 static char* buf() {
-	return (char*)malloc(BUFLEN+1);
+	return (char*)emalloc(BUFLEN+1);
 }
 
 /* internal: string equals */
@@ -245,7 +258,7 @@ ovf2_data ovf2_read(FILE* in) {
 
 	size_t nfloat = ovf2_datalen(d);
 	assert(nfloat > 0);
-	d.data = (float*)malloc(nfloat * sizeof(float));
+	d.data = (float*)emalloc(nfloat * sizeof(float));
 
 	/* read control number into data array, overwrite with actual data later. */
 	float control = readFloat(&d, in);
