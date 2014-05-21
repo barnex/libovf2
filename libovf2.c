@@ -80,7 +80,7 @@ static void ovf2_readLine(ovf2_data * d, char *line, FILE* in) {
 	char *result = fgets(line, BUFLEN, in);
 	if (result != line){
 		d->err = ovf2_buf();
-		ovf2_sn(sprintf(d->err, "ovf2_read: input error: errno %d", errno));
+		ovf2_sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
 		return;
 	}
 
@@ -138,7 +138,7 @@ static void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
 	int ret = fread(d->data, sizeof(float), nfloat, in);
 	if(ret != nfloat){
 		d->err = ovf2_buf();
-		ovf2_sn(sprintf(d->err, "ovf2_read: input error: errno %d", errno));
+		ovf2_sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
 	}
 }
 
@@ -255,8 +255,9 @@ ovf2_data ovf2_readfile(const char *filename) {
 	FILE *in = fopen(filename, "r");
 	if(in == NULL) {
 		char *buf = ovf2_buf();
-		ovf2_sn(sprintf(buf, "ovf2_readfile: failed to open \"%s\": errno %d\n", filename, errno));
+		ovf2_sn(sprintf(buf, "ovf2_readfile: failed to open \"%s\": %s\n", filename, strerror(errno)));
 		ovf2_data d = ovf2_makeData();
+		d.err = buf;
 		return d;
 	}
 	
@@ -333,7 +334,7 @@ void ovf2_writefile(const char *filename, ovf2_data data) {
     FILE *out = fopen(filename, "w+");
 
     if(out == NULL) {
-        fprintf(stderr, "ovf2_writefile: failed to open %s: errno %d\n", filename, errno);
+        fprintf(stderr, "ovf2_writefile: failed to open %s: %s\n", filename, strerror(errno));
         abort();
     }
 	ovf2_write(out, data);
