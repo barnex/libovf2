@@ -53,6 +53,10 @@ void ovf2_free(ovf2_data *data);
 /* returns the length of the data array (valuedim * xnodes * ynodes * znodes). */
 int ovf2_datalen(ovf2_data data);
 
+/* utility function for getting address of element data[c][z][y][x],
+ * with bound checks. */
+float *ovf2_addr(ovf2_data *data, int c, int x, int y, int z);
+
 /* utility function for getting element data[c][z][y][x],
  * with bound checks. */
 float ovf2_get(ovf2_data *data, int c, int x, int y, int z);

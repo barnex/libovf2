@@ -132,15 +132,38 @@ static const char* ovf2_hdrVal(const char *line){
 	return &line[start];
 }
 
+static float ovf2_readFloat(ovf2_data *d, FILE *in){
+	float buf = 0;
+		int ret = fread(&buf, sizeof(float), 1, in);
+		if (ret != 1){
+			d->err = ovf2_buf();
+			ovf2_sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
+			return 0.0f;
+		}
+	return buf;
+}
+
 /* internal: read nfloat floats from in to d->data.
    store possible error message in d->err. */
-static void ovf2_readFloats(ovf2_data *d, int nfloat, FILE *in){
-	int ret = fread(d->data, sizeof(float), nfloat, in);
-	if(ret != nfloat){
-		d->err = ovf2_buf();
-		ovf2_sn(sprintf(d->err, "ovf2_read: input error: %s", strerror(errno)));
+static void ovf2_readData(ovf2_data *d, FILE *in){
+	int iz, iy, ix, ic;
+
+	for(iz=0; iz<d->znodes; iz++){
+	for(iy=0; iy<d->ynodes; iy++){
+	for(ix=0; ix<d->xnodes; ix++){
+	for(ic=0; ic<d->valuedim; ic++){
+		float v = ovf2_readFloat(d, in);
+		if (d->err != NULL){
+			return;
+		}
+		*ovf2_addr(d, ic, ix, iy, iz) = v;
+	}
+	}
+	}
 	}
 }
+
+
 
 /* internal: construct zero value. */
 static ovf2_data ovf2_makeData(){
@@ -224,8 +247,11 @@ ovf2_data ovf2_read(FILE* in) {
 	d.data = (float*)malloc(nfloat * sizeof(float));
 	
 	/* read control number into data array, overwrite with actual data later. */
-	ovf2_readFloats(&d, 1, in);
-	if (d.data[0] != OVF2_CONTROL_NUMBER) {
+	float control = ovf2_readFloat(&d, in);
+	if (d.err != NULL){
+		return d;
+	}
+	if (control != OVF2_CONTROL_NUMBER) {
 		d.err = ovf2_buf();
 		ovf2_sn(sprintf(d.err, "invalid ovf control number: %f:", d.data[0]));
 		free(d.data);
@@ -234,7 +260,7 @@ ovf2_data ovf2_read(FILE* in) {
 	}
 	
 	/* read rest of data */
-	ovf2_readFloats(&d, nfloat, in);
+	ovf2_readData(&d, in);
 	if (d.err != NULL){
    		return d;
 	}
@@ -254,10 +280,9 @@ ovf2_data ovf2_read(FILE* in) {
 ovf2_data ovf2_readfile(const char *filename) {
 	FILE *in = fopen(filename, "r");
 	if(in == NULL) {
-		char *buf = ovf2_buf();
-		ovf2_sn(sprintf(buf, "ovf2_readfile: failed to open \"%s\": %s\n", filename, strerror(errno)));
 		ovf2_data d = ovf2_makeData();
-		d.err = buf;
+		d.err = ovf2_buf();
+		ovf2_sn(sprintf(d.err, "ovf2_readfile: failed to open \"%s\": %s\n", filename, strerror(errno)));
 		return d;
 	}
 	
@@ -268,6 +293,10 @@ ovf2_data ovf2_readfile(const char *filename) {
 
 
 float ovf2_get(ovf2_data *data, int c, int x, int y, int z) {
+	return *ovf2_addr(data, c, x, y, z);
+}
+
+float *ovf2_addr(ovf2_data *data, int c, int x, int y, int z) {
 	int Nx = data->xnodes;
 	int Ny = data->ynodes;
 	int Nz = data->znodes;
@@ -278,7 +307,7 @@ float ovf2_get(ovf2_data *data, int c, int x, int y, int z) {
 	       z >= 0 && z < Nz &&
 	       c >= 0 && c < Nc);
 	
-	return data->data[((c*Nz+z)*Ny + y)*Nx + x];
+	return &(data->data[((c*Nz+z)*Ny + y)*Nx + x]);
 }
 
 

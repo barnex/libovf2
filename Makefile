@@ -7,3 +7,7 @@ libovf2:
 
 test: libovf2
 	./test
+
+debug:
+	gcc -O0 -g -std=c99 -Wall -Wextra -Werror libovf2.c test.c  -o test
+	gdb test

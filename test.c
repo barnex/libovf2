@@ -1,5 +1,6 @@
-#include "libovf2.h"
+/* Unit tests. */
 
+#include "libovf2.h"
 
 int testScalarIndex(){
 	ovf2_data d = ovf2_readfile("testdata_good/scalar123.ovf");
@@ -32,7 +33,7 @@ int testVectorIndex(){
 		printf("want 5, got: %f\n", val);
 		return 1;
 	}
-	val = ovf2_get(&d, 3, 1, 2, 3);
+	val = ovf2_get(&d, 2, 1, 2, 3);
 	if(val != 6.0){
 		printf("want 6, got: %f\n", val);
 		return 1;
